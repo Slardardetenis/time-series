@@ -1,6 +1,6 @@
 # Programmer: Giovani Carrara Rodrigues
 
-# date: ago/23/2015
+# date: ago/24/2015
 
 # description: Creating a fake time-series and a moving average filter
 	
@@ -62,8 +62,34 @@ pdf(paste("time-series","mean=",as.character(aver),"var=",as.character(vari),"N=
 ts.plot(x,main="Time-series Bjundas")
 dev.off()
 
-# final exercício a)
+#final exercício a)
 
-# Início exercício b) Moving Average Filter
+# Início exercício b) moving average filter
 
-# final exercício b) Moving Average Filter
+# função para calcular as médias móveis, onde t é a entrada da série e j é índice "k" das médias móveis
+maf <- function(t,j) {
+	size <- length(t)-2*j # tamanho da nova série
+	p <-j # atribuindo para nao dar problema
+	#contr <- 2*j # talves eu use
+	aux <- rep(0,size) # criando vetor da série filtrada
+	for(k in 1:size){ # gerando a série filtrada
+		o <- 1
+		aux[k] <- t[k+p] # atribuindo valor central
+		while(o <= j){
+			aux[k] <- aux[k]+t[k+p-o] + t[k+p+o] #atribuindo valores com mesma distância
+			o <- o+1
+		}
+		aux[k] <- aux[k]/(2*j+1) # dividindo pela quantidade de valores na média móvel
+	}
+	return(aux) # retornando a série filtrada
+}
+
+tam <- 2 # k das médias móveis
+
+newseries <- maf(x,tam) # chamando a função que calcula as médias móveis
+
+pdf(paste("time-series after moving average","mean=",as.character(aver),"var=",as.character(vari),"N=",as.character(N),".pdf"))
+ts.plot(newseries,main="Time-series after moving average Bjundas")
+dev.off()
+
+# final exercício b)
