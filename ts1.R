@@ -17,10 +17,10 @@ aver <- 0 # atribuindo média do erro aleatório "a"
 
 # declarando vetores de cada componente da série temporal
 
-z <- rep(0,N) # componente estocástica
-a <- rep(0,N) # erro aletório gerado por uma dist. normal
+z   <- rep(0,N) # componente estocástica
+a   <- rep(0,N) # erro aletório gerado por uma dist. normal
 tre <- rep(0,N) # tendencia 
-x <- rep(0,N) # valor fake da série 
+x   <- rep(0,N) # valor fake da série 
 
 
 trend <- function(j){
@@ -37,29 +37,29 @@ trend <- function(j){
 
 # atribuindo valor à primeira posição de x
 
-a[1] <- rnorm(1,0,1)
+a[1]   <- rnorm(1,0,1)
 
-z[1] <- 0
+z[1]   <- 0
 
 tre[1] <- trend(1)
 
-x[1] <- trend(1) + z[1]
+x[1]   <- trend(1) + z[1]
 
 #Gerando a série temporal
 
 for(i in 2:N){
-	a[i] <- rnorm(1,aver,vari) 
-	z[i] <- 0.5*z[i-1] + a[i]
+	a[i]   <- rnorm(1,aver,vari) 
+	z[i]   <- 0.5*z[i-1] + a[i]
 	tre[i] <- trend(i)
-	x[i] <- tre[i] + z[i]
+	x[i]   <- tre[i] + z[i]
 	cat(i,"\n")	
 }
 
-ts.plot(x) # plotando o gráfico da série temporal
+ts.plot(x,main="Time-series Bjundas") # plotando o gráfico da série temporal
 
 # Salvando o gráfico da série temporal em pdf
 pdf(paste("time-series","mean=",as.character(aver),"var=",as.character(vari),"N=",as.character(N),".pdf"))
-ts.plot(x)
+ts.plot(x,main="Time-series Bjundas")
 dev.off()
 
  
