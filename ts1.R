@@ -2,7 +2,7 @@
 
 # date: ago/23/2015
 
-# description: Creating a fake time-series
+# description: Creating a fake time-series and a moving average filter
 	
 # Inicio do exercício a) Creating a fake time-series
 rm(list=ls(TRUE))
@@ -64,6 +64,6 @@ dev.off()
 
 # final exercício a)
 
-# Início exercício b)
+# Início exercício b) Moving Average Filter
 
-# final exercício b)
+# final exercício b) Moving Average Filter
