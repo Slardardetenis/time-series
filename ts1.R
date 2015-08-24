@@ -4,7 +4,7 @@
 
 # description: Creating a fake time-series
 	
-
+# Inicio do exercício a) Creating a fake time-series
 rm(list=ls(TRUE))
 
 set.seed(2015)
@@ -62,8 +62,8 @@ pdf(paste("time-series","mean=",as.character(aver),"var=",as.character(vari),"N=
 ts.plot(x,main="Time-series Bjundas")
 dev.off()
 
- 
+# final exercício a)
 
+# Início exercício b)
 
-
-
+# final exercício b)
