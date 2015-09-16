@@ -1,12 +1,27 @@
-# Programmer: Giovani Carrara Rodrigues
+---
+title: "Simulando uma série temporal"
+author: "SME0808-Séries Temporais"
+output: html_document
+---
 
-# date: ago/24/2015
+* Giovani Carrara Rodrigues 7151669
 
-# description: Creating a fake time-series, a moving average filter and a exponential smoothing filter
-	
-# Inicio do exercício a) Creating a fake time-series
+* Diego Aoki 5991861
 
-rm(list=ls(all=T)) # remove content from the Environment
+* Vitor Bonini 8065859
+
+
+## Criando uma série temporal falsa ##
+
+\newcommand\iid{i.i.d.}
+\newcommand\pN{\mathcal{N}}
+
+A série que vamos gerar segue o modelo:\newline\
+
+$X_t=T_t+Z_t$ onde $T_t=\alpha_0+\alpha_1 t$ e $Z_tS=0.5Z_{t-1}+a_t$, com $Z_0=0$ e $a_t\sim N(0,\sigma_b) \iid$ 
+```{r}
+
+#rm(list=ls(TRUE))
 
 set.seed(2015)
 
@@ -26,7 +41,7 @@ x   <- rep(0,N) # valor fake da série
 
 trend <- function(j){
 # Coeficientes tendencia dada pelo polinômio trend = alpha0 + alpha1*t + alpha2*(t^2)
-	alpha0 <- 1
+  alpha0 <- 1
 	alpha1 <- 0.5
 	alpha2 <- 0
 
@@ -53,26 +68,28 @@ for(i in 2:N){
 	z[i]   <- 0.5*z[i-1] + a[i]
 	tre[i] <- trend(i)
 	x[i]   <- tre[i] + z[i]
-	cat(i,"\n")	
+	#cat(i,"\n")	
 }
 
-ts.plot(x,main="Time-series Bjundas") # plotando o gráfico da série temporal
 
-# Salvando o gráfico da série temporal em pdf
-pdf(paste("time-series","mean=",as.character(aver),"var=",as.character(vari),"N=",as.character(N),".pdf"))
-plot(x,type="l",col="#00FFFF",lwd=1,lty=1)
-dev.off()
+```
 
-#final exercício a)
+###Ficamos com a seguinte série
 
-# Início exercício b) moving average filter
+```{r,echo=F}
+plot(x,main="Serie-temporal Bjundas",type="l",col="blue",lwd=1,lty=1)
+```
 
-# função para calcular as médias móveis, onde t é a entrada da série e j é índice "k" das médias móveis
+## Implentando as funções para o filtro de médias móveis e a suavização exponencial
+
+### Médias Móveis (Moving Average)
+# $T^*_t=\sum\limits_{j=-k}^kC_j X_{t+j}$
+
+```{r}
 maf <- function(t,j) {
   if(j>length(t)) return("jumento, o tamanho da média móvel nao pode ser maior que o tamanho da série")
-	size <- length(t)-2*j # tamanho da nova série
+  size <- length(t)-2*j # tamanho da nova série
 	p <-j # atribuindo para nao dar problema
-	#contr <- 2*j # talves eu use
 	aux <- rep(0,size) # criando vetor da série filtrada
 	for(k in 1:size){ # gerando a série filtrada
 		o <- 1
@@ -86,17 +103,15 @@ maf <- function(t,j) {
 	return(aux) # retornando a série filtrada
 }
 
-tam <- 2 # k das médias móveis
 
-tsma <- maf(x,tam) # chamando a função que calcula as médias móveis
+```
 
-pdf(paste("time-series after moving average","mean=",as.character(aver),"var=",as.character(vari),"N=",as.character(N),".pdf"))
-ts.plot(tsma,main="Time-series after moving average Bjundas")
-dev.off()
+### Suavização Exponencial (Exponential Smoothing)
 
-# final exercício b)
+#$\overline{X}_t=\alpha X_t + (1-\alpha)\overline{X}_{t-1}$
 
-# Início exercício c) exponential smoothing
+```{r}
+
 
 exps <- function(t,a){
   if(a<0 || a>1) return("Para de ser burro vc errou o segundo parametro da função")
@@ -109,11 +124,16 @@ exps <- function(t,a){
   return(aux) # retornando o vetor com a suavização esponencial
 }
 
-tsexp <- exps(x,0.4)
 
-# plotando o gráfico final
+```
 
-pdf("bjundas.pdf")
+## Aqui temos o gráfico com a série temporal Bjundas original, Bjundas com o filtro de médias móveis(k=2) e Bjundas com a suavização exponencial $\alpha=0.4$
+
+```{r,echo=F}
+
+tsma <- maf(x,2) # chamando a função que calcula as médias móveis
+
+tsexp <- exps(x,0.4) # chamando a função que a suavização exponencial
 
 plot(x,type="l",main="Série-temporal Bjundas com alguns filtros",col="blue",lwd=1,lty=1)
 
@@ -122,4 +142,7 @@ points(tsexp,type="l",col="green",lwd=1,lty=1)
 
 legend("bottomright", legend=c("TS Bjudas", "moving average","exp smoothing"),col=c("Blue", "red","green"), lty=1, cex=0.8)
 
-dev.off()
+
+```
+
+
