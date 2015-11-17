@@ -1,0 +1,181 @@
+---
+title: "Modelando uma série temporal"
+author: "SME0808-Séries Temporais"
+date: "16 de novembro de 2015"
+output:
+  html_document: default
+  pdf_document:
+    keep_tex: yes
+---
+* Giovani Carrara Rodrigues 7151669
+
+* Diego Aoki 5991861
+
+* Vitor Bonini 8065859
+
+Abaixo temos o gráfico de temperaturas máximas diária em Melbourne, Australia, 1981-1990.
+Os dados podem ser baixados no seguinte link <https://datamarket.com/data/set/2323/daily-maximum-temperatures-in-melbourne-australia-1981-1990#!ds=2323&display=line>
+
+```{r, echo=FALSE, message=FALSE}
+library(dygraphs)
+library(xts)
+library(zoo)
+library(forecast)
+
+```
+
+
+```{r, echo=FALSE}
+data = read.csv("daily-maximum-temperatures-in-me.csv",sep=",",header=T)
+
+# criando o objeto ts serie temporal
+ts2 = ts(data[,2],start=c(1981,1),frequency = 365)
+
+# criando xts serie temporal
+ts3 = as.xts(data[,2],order.by = as.Date(data[,1],"%Y-%m-%d"))
+
+dygraph(ts3, main="Temperaturas máximas diarias") %>%
+  dyOptions(stackedGraph = FALSE) %>%
+  dyRangeSelector(height = 20)
+
+
+```
+
+Vemos que nossa série não tem tendência, mas claramente tem sazonalidade. Portanto vamos adotar o seguinte modelo:
+
+$X_t = S_t + Z_t$ , onde $S_t$ é componente sazonal e $Z_t$ é componente estocástica
+
+Utilizando o modelo não paramétrico para sazonalidade temos que um estimador é dado por
+
+$\hat{\mu}_m = \frac{1}{n} \sum\limits_{r=1}^{n}X_{r,m}$, onde $n \in (1,10)$ e $m \in (1,365)$
+
+No código abaixo aplicamos esse estimador para sazonalidade em nossa série
+
+```{r}
+#lendo os dados
+data = read.csv("daily-maximum-temperatures-in-me.csv",sep=",",header=T)
+
+aux = data
+for(i in 1:365)
+{
+  for(k in 1:9)
+  {
+    aux[i,2] = aux[i,2] + aux[i+(k*365),2]
+  }
+}
+aux[,2] = aux[,2]/10
+sazo = rep(aux[1:365,2],10)
+
+```
+
+Portando nossa sazonalidade estimada fica
+
+```{r}
+# criando objeto ts para sazonalidade
+sazots = ts(sazo, start = c(1981,1),frequency = 365 )
+
+# criando objeto xts para sazonalidade
+sazoxts = xts(sazo, order.by = as.Date(data[,1],"%Y-%m-%d"))
+
+# plotando sazonalidade (sazoxts)
+dygraph(sazoxts, main ="Sazonalidade")
+
+
+```
+
+Estraindo a sazonalidade da série ficamos com a seguinte série só com a componente estocástica $(Z_t)$
+
+```{r}
+# subtraindo a sazonalidade da série
+aux2 = data[,2] - sazo
+
+# criando objeto ts da série sem subtraida pela sazonalidade
+tsnosazo = ts(aux2, start = c(1981,1), frequency = 365)
+
+# criando objeto xts da série subtraida pela sazonalidade
+xtsnosazo = xts(aux2, order.by = as.Date(data[,1],"%Y-%m-%d"))
+
+# plotando a serie subtraida pela sazonalidade
+dygraph(xtsnosazo, main ="Componente Estocástica")
+
+```
+
+```{r}
+Acf(xtsnosazo, lag.max=20)
+Pacf(xtsnosazo, lag.max=20)
+
+```
+
+Pelos gráficos de auto-correlação e auto-correlação parcial vemos que um modelo para componente estocástica pode ser o MA(q=2)
+
+Vamos testar os seguintes modelos analisando os resíduos e depois comparar o AIC e BIC para decidir qual deles usar.
+
+```{r}
+##  SERIE - SERIEAJUSTADA = RESIDUO => SERIEAJUSTADA = SERIE - RESIDUO ##
+
+# AR(2) = ARIMA(2,0,0)
+(ar2 = Arima(tsnosazo, order = c(2,0,0)))
+# componente estocastica ajustada
+fitar2 =tsnosazo - ar2$residuals
+qqnorm(ar2$residuals, main ="QQnorm AR(2)")
+abline(0, 1)
+# componente estocastica mais comp. sazonal = serie ajustada
+artsfit = sazots + fitar2
+# residuo levando em consideração a série estimada
+arres = ts2 - artsfit
+# plot da série estimada e serie real
+aux = as.data.frame(artsfit)
+arxtsfit = xts(aux[,1], order.by = as.Date(data[,1],"%Y-%m-%d"))
+tss = cbind(ts3, arxtsfit)
+dygraph(tss, main = "AR(2)") %>%
+  dyRangeSelector()
+
+# MA(2) = ARIMA(0,0,1)
+ma2 = Arima(tsnosazo, order = c(0,0,2))
+# componente estocastica ajustada
+fitma2 =tsnosazo - ma2$residuals
+qqnorm(ma2$residuals,main ="QQnorm MA(2)")
+abline(0, 1)
+# componente estocastica mais comp. sazonal = serie ajustada
+matsfit = sazots + fitma2
+# residuo levando em consideração a série estimada
+mares = ts2 - matsfit
+# plot da série estimada e serie real
+aux = as.data.frame(matsfit)
+maxtsfit = xts(aux[,1], order.by = as.Date(data[,1],"%Y-%m-%d"))
+tss = cbind(ts3, maxtsfit)
+dygraph(tss, main = "MA(2)") %>%
+  dyRangeSelector()
+
+# ARMA(2,2) = ARIMA(2,0,2)
+arma22 = Arima(tsnosazo, order = c(2,0,2))
+# componente estocastica ajustada
+fitarma22 =tsnosazo - arma22$residuals
+qqnorm(arma22$residuals, main="QQnorm ARMA(2,2)")
+abline(0,1)
+# componente estocastica mais comp. sazonal = serie ajustada
+armatsfit = sazots + fitarma22
+# residuo levando em consideração a série estimada
+armares = ts2 - armatsfit
+# plot da série estimada e serie real
+aux = as.data.frame(armatsfit)
+armaxtsfit = xts(aux[,1], order.by = as.Date(data[,1],"%Y-%m-%d"))
+tss = cbind(ts3, armaxtsfit)
+dygraph(tss, main = "ARMA(2,2)") %>%
+  dyRangeSelector()
+
+
+# ARIMA(2,1,2)
+arima212 = Arima(ts2, order = c(2,1,2))
+# componente estocastica ajustada
+fitarima212 =tsnosazo - arima212$residuals
+qqnorm(arima212$residuals, main="QQnorm ARiMA(2,1,2)")
+abline(0,1)
+
+
+
+
+
+
+```
+

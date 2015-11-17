@@ -1,0 +1,11 @@
+Gerenciador de pacotes para o texlive:
+
+chama-se: tlmgr
+
+pra ele funcionar direito vc precisa instalar o pacote xzdec primeiro:
+
+sudo apt-get install xzdec
+
+ai por exemplo para instalar pacotes para o latex (texlive) por exemplo o pacote framed:
+
+tlmgr install framed
