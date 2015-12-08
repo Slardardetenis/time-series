@@ -13,6 +13,8 @@ output:
 
 * Vitor Bonini 8065859
 
+## 1. A série temporal
+
 Abaixo temos o gráfico de temperaturas máximas diária em Melbourne, Australia, 1981-1990.
 Os dados podem ser baixados no seguinte link <https://datamarket.com/data/set/2323/daily-maximum-temperatures-in-melbourne-australia-1981-1990#!ds=2323&display=line>
 
@@ -36,6 +38,7 @@ ts3 = as.xts(data[,2],order.by = as.Date(data[,1],"%Y-%m-%d"))
 
 dygraph(ts3, main="Temperaturas máximas diarias") %>%
   dyOptions(stackedGraph = FALSE) %>%
+  dySeries("V1", label = "Temperatura (C)") %>%
   dyRangeSelector(height = 20)
 
 
@@ -78,7 +81,8 @@ sazots = ts(sazo, start = c(1981,1),frequency = 365 )
 sazoxts = xts(sazo, order.by = as.Date(data[,1],"%Y-%m-%d"))
 
 # plotando sazonalidade (sazoxts)
-dygraph(sazoxts, main ="Sazonalidade")
+dygraph(sazoxts, main ="Sazonalidade") %>%
+    dySeries("V1", label = "Temperatura (C)")
 
 
 ```
@@ -96,7 +100,8 @@ tsnosazo = ts(aux2, start = c(1981,1), frequency = 365)
 xtsnosazo = xts(aux2, order.by = as.Date(data[,1],"%Y-%m-%d"))
 
 # plotando a serie subtraida pela sazonalidade
-dygraph(xtsnosazo, main ="Componente Estocástica")
+dygraph(xtsnosazo, main ="Componente Estocástica") %>%
+    dySeries("V1", label = "Temperatura (C)")
 
 ```
 
@@ -106,19 +111,24 @@ Pacf(xtsnosazo, lag.max=20)
 
 ```
 
+## 2. Escolha do Modelo
+
 Pelos gráficos de auto-correlação e auto-correlação parcial vemos que um modelo para componente estocástica pode ser o MA(q=2)
 
-Vamos testar os seguintes modelos analisando os resíduos e depois comparar o AIC e BIC para decidir qual deles usar.
+Vamos testar os seguintes modelos analisando os resíduos e depois comparar o AIC e BIC para decidir qual deles usar, onde quanto menor o valor dessas medidas, melhor o modelo.
 
 ```{r}
 ##  SERIE - SERIEAJUSTADA = RESIDUO => SERIEAJUSTADA = SERIE - RESIDUO ##
 
 # AR(2) = ARIMA(2,0,0)
-(ar2 = Arima(tsnosazo, order = c(2,0,0)))
+ar2 = Arima(tsnosazo, order = c(2,0,0))
+ar2
 # componente estocastica ajustada
 fitar2 =tsnosazo - ar2$residuals
 qqnorm(ar2$residuals, main ="QQnorm AR(2)")
 abline(0, 1)
+# grafico autocorrelação resíduos AR(2)
+acf(ar2$residuals)
 # componente estocastica mais comp. sazonal = serie ajustada
 artsfit = sazots + fitar2
 # residuo levando em consideração a série estimada
@@ -127,15 +137,19 @@ arres = ts2 - artsfit
 aux = as.data.frame(artsfit)
 arxtsfit = xts(aux[,1], order.by = as.Date(data[,1],"%Y-%m-%d"))
 tss = cbind(ts3, arxtsfit)
+colnames(tss) = c("Série Original","AR(2)")
 dygraph(tss, main = "AR(2)") %>%
   dyRangeSelector()
 
 # MA(2) = ARIMA(0,0,1)
 ma2 = Arima(tsnosazo, order = c(0,0,2))
+ma2
 # componente estocastica ajustada
 fitma2 =tsnosazo - ma2$residuals
 qqnorm(ma2$residuals,main ="QQnorm MA(2)")
 abline(0, 1)
+# grafico autocorrelação resíduos MA(2)
+acf(ma2$residuals)
 # componente estocastica mais comp. sazonal = serie ajustada
 matsfit = sazots + fitma2
 # residuo levando em consideração a série estimada
@@ -144,15 +158,19 @@ mares = ts2 - matsfit
 aux = as.data.frame(matsfit)
 maxtsfit = xts(aux[,1], order.by = as.Date(data[,1],"%Y-%m-%d"))
 tss = cbind(ts3, maxtsfit)
+colnames(tss) = c("Série Original","MA(2)")
 dygraph(tss, main = "MA(2)") %>%
   dyRangeSelector()
 
 # ARMA(2,2) = ARIMA(2,0,2)
 arma22 = Arima(tsnosazo, order = c(2,0,2))
+arma22
 # componente estocastica ajustada
 fitarma22 =tsnosazo - arma22$residuals
 qqnorm(arma22$residuals, main="QQnorm ARMA(2,2)")
 abline(0,1)
+# grafico autocorrelação resíduos AR(2)
+acf(arma22$residuals)
 # componente estocastica mais comp. sazonal = serie ajustada
 armatsfit = sazots + fitarma22
 # residuo levando em consideração a série estimada
@@ -161,21 +179,52 @@ armares = ts2 - armatsfit
 aux = as.data.frame(armatsfit)
 armaxtsfit = xts(aux[,1], order.by = as.Date(data[,1],"%Y-%m-%d"))
 tss = cbind(ts3, armaxtsfit)
+colnames(tss) = c("Série Original","ARMA(2,2)")
 dygraph(tss, main = "ARMA(2,2)") %>%
   dyRangeSelector()
 
 
 # ARIMA(2,1,2)
 arima212 = Arima(ts2, order = c(2,1,2))
+arima212
 # componente estocastica ajustada
 fitarima212 =tsnosazo - arima212$residuals
 qqnorm(arima212$residuals, main="QQnorm ARiMA(2,1,2)")
 abline(0,1)
+# grafico autocorrelação resíduos AR(2)
+acf(arima212$residuals)
+# componente estocastica mais comp. sazonal = serie ajustada
+arimatsfit = sazots + fitarima212
+# residuo levando em consideração a série estimada
+arimares = ts2 - arimatsfit
+# plot da série estimada e serie real
+aux = as.data.frame(arimatsfit)
+arimaxtsfit = xts(aux[,1], order.by = as.Date(data[,1],"%Y-%m-%d"))
+tss = cbind(ts3, arimaxtsfit)
+colnames(tss) = c("Série Original","ARIMA(2,1,2)")
+dygraph(tss, main = "ARIMA(2,1,2)") %>%
+  dyRangeSelector()
 
 
 
+supertss = cbind(ts3,arxtsfit,maxtsfit,armaxtsfit,arimaxtsfit)
+colnames(supertss) = c("Série Original","AR(2)","MA(2)","ARMA(2,2)","ARIMA(2,1,2)")
+dygraph(supertss, main = "Todos") %>%
+  dyRangeSelector()
 
 
 
 ```
+Todos os modelos parecem ter resíduos não normais e não correlacionados, como visto nos gráficos de auto-correlação.
+Contudo o melhor modelo é o AR(2), pois possui o menor AIC e BIC.
+
+## 3. Previsão
+
+```{r}
+# fazendo a previsão para a componente estocástica apenas
+predar2 = forecast.Arima(ar2,h=10)
+# intervalos superiorer para cada previsão
+H = predar2$upper[,2]
+```
+
 
